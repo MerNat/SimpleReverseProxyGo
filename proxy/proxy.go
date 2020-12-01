@@ -36,7 +36,7 @@ func (proxy *Proxy) Start() {
 	if err != nil {
 		log.Fatalf("Remote connection failure: %v", err)
 	}
-
+	//sync approves the right remote service response will be associated with the request from client side.
 	sync := make(chan int)
 
 	defer proxy.Rconn.Close()
@@ -82,8 +82,13 @@ func (proxy *Proxy) CopySrcDst(src, dst io.ReadWriteCloser, isFromLocalhost bool
 				cData, err := util.GetCacheData(index)
 				if err != nil {
 					log.Println(err.Error())
+					continue
 				}
-				log.Printf("[%s] Responding data from caching: \n", cData.URL)
+				url := cData.URL
+				if url == "" {
+					url = "/"
+				}
+				log.Printf("Responding to [%s] query from caching.\n", url)
 				err = proxy.writeToDestination(src, cData.ResponseBody)
 				if err != nil {
 					proxy.err(err)

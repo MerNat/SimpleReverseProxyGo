@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net"
 
@@ -9,13 +10,19 @@ import (
 )
 
 func main() {
-	util.CacheExpiration = 4
-	listenerAddress, err := util.TCPAddressResolver(":8080")
+	localAddr := flag.String("l", ":8080", "Local address")
+	remoteAddr := flag.String("r", "localhost:3000", "Remote address")
+	cacheExpiration := flag.Int("c", 4, "Cache Expiration in seconds")
+
+	flag.Parse()
+
+	util.CacheExpiration = *cacheExpiration
+	listenerAddress, err := util.TCPAddressResolver(*localAddr)
 	if err != nil {
 		log.Fatalf("Failed to resolve local address: %v", err)
 	}
 
-	remoteAddress, err := util.TCPAddressResolver(":3000")
+	remoteAddress, err := util.TCPAddressResolver(*remoteAddr)
 
 	if err != nil {
 		log.Fatalf("Failed to resolve remote address: %v", err)
@@ -27,7 +34,7 @@ func main() {
 		log.Fatalf("Failed to open local port to listen: %v", err)
 	}
 
-	log.Printf("Simple Proxy started on: %d and forwards to port %d", listenerAddress.Port, remoteAddress.Port)
+	log.Printf("Simple Proxy started on: %d and forwards to port %d: (Caching Expiration: %d Seconds)", listenerAddress.Port, remoteAddress.Port, util.CacheExpiration)
 	for {
 		conn, err := listener.AcceptTCP()
 

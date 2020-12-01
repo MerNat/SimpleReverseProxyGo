@@ -2,6 +2,7 @@ package util
 
 import (
 	"errors"
+	"log"
 	"net"
 	"sort"
 	"strings"
@@ -27,7 +28,7 @@ type CacheData struct {
 var Cache []CacheData
 
 //CacheExpiration for expiration of caching in seconds
-var CacheExpiration = 4 //4 seconds for the caching to expire
+var CacheExpiration int // seconds for the caching to expire
 
 //TCPAddressResolver resolved an address and returns to an struct having ip and port.
 func TCPAddressResolver(addr string) (tcpAddress *net.TCPAddr, err error) {
@@ -84,7 +85,6 @@ func (cacheData *CacheData) DoesCacheDataExistNB() (idx int) {
 	if len(Cache) == 0 {
 		return idx
 	}
-
 	if len(Cache) != 1 {
 		sort.Slice(Cache, func(i, j int) bool { return Cache[i].URL < Cache[j].URL })
 
@@ -106,6 +106,7 @@ func (cacheData *CacheData) DoesCacheDataExistNB() (idx int) {
 	delay := time.Now().Sub(Cache[idx].Expiration).Seconds()
 	if int(delay) > CacheExpiration {
 		//Expired
+		log.Println("Cache data for requested query expired.")
 		Cache[idx].ResponseBody = nil
 		idx = -1
 	}
@@ -119,6 +120,7 @@ func (cacheData *CacheData) SaveData(data []byte) {
 		return Cache[i].ID >= cacheData.ID
 	})
 	if idx >= 0 && len(Cache[idx].ResponseBody) == 0 {
+		log.Println("Caching response data from remote service.")
 		Cache[idx].ResponseBody = data
 		Cache[idx].Expiration = time.Now()
 	}
