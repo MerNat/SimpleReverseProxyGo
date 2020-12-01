@@ -5,7 +5,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/MerNat/SimpleReverseProxyGoLang/util"
+	"github.com/MerNat/SimpleReverseProxyGoLang/caching"
 )
 
 //Proxy identifies proxy as as a one way connection
@@ -69,17 +69,17 @@ func (proxy *Proxy) CopySrcDst(src, dst io.ReadWriteCloser, isFromLocalhost bool
 		dataFromBuffer := buff[:n]
 
 		if isFromLocalhost {
-			identifier := len(util.Cache)
-			cacheData, err := util.ExtractData(dataFromBuffer, identifier)
+			identifier := len(caching.Cache)
+			cacheData, err := caching.ExtractData(dataFromBuffer, identifier)
 
-			checkOld, err := util.GetCacheDataUsingURL(cacheData.URL)
+			checkOld, err := caching.GetCacheDataUsingURL(cacheData.URL)
 			if err != nil {
 				cacheData = checkOld
 			}
 			index := cacheData.DoesCacheDataExistNB()
 			if index >= 0 {
 				//If found; retrieve data from cache and send it back to client.
-				cData, err := util.GetCacheData(index)
+				cData, err := caching.GetCacheData(index)
 				if err != nil {
 					log.Println(err.Error())
 					continue
@@ -102,7 +102,7 @@ func (proxy *Proxy) CopySrcDst(src, dst io.ReadWriteCloser, isFromLocalhost bool
 				id <- ident
 			}(identifier)
 		} else {
-			cacheData := &util.CacheData{ID: <-id}
+			cacheData := &caching.CacheData{ID: <-id}
 			cacheData.SaveData(dataFromBuffer)
 		}
 

@@ -5,8 +5,8 @@ import (
 	"log"
 	"net"
 
+	"github.com/MerNat/SimpleReverseProxyGoLang/caching"
 	"github.com/MerNat/SimpleReverseProxyGoLang/proxy"
-	"github.com/MerNat/SimpleReverseProxyGoLang/util"
 )
 
 func main() {
@@ -16,13 +16,13 @@ func main() {
 
 	flag.Parse()
 
-	util.CacheExpiration = *cacheExpiration
-	listenerAddress, err := util.TCPAddressResolver(*localAddr)
+	caching.CacheExpiration = *cacheExpiration
+	listenerAddress, err := caching.TCPAddressResolver(*localAddr)
 	if err != nil {
 		log.Fatalf("Failed to resolve local address: %v", err)
 	}
 
-	remoteAddress, err := util.TCPAddressResolver(*remoteAddr)
+	remoteAddress, err := caching.TCPAddressResolver(*remoteAddr)
 
 	if err != nil {
 		log.Fatalf("Failed to resolve remote address: %v", err)
@@ -34,7 +34,7 @@ func main() {
 		log.Fatalf("Failed to open local port to listen: %v", err)
 	}
 
-	log.Printf("Simple Proxy started on: %d and forwards to port %d: (Caching Expiration: %d Seconds)", listenerAddress.Port, remoteAddress.Port, util.CacheExpiration)
+	log.Printf("Simple Proxy started on: %d and forwards to port %d: (Caching Expiration: %d Seconds)", listenerAddress.Port, remoteAddress.Port, caching.CacheExpiration)
 	for {
 		conn, err := listener.AcceptTCP()
 
