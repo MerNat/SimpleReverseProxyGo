@@ -109,12 +109,18 @@ func (proxy *Proxy) CopySrcDst(src, dst io.ReadWriteCloser, isFromLocalhost bool
 					id <- ident
 				}(identifier)
 			}
-		} else {
-			syncIdent := <-id
-			if syncIdent != -1 {
-				cacheData := &caching.CacheData{ID: syncIdent}
-				cacheData.SaveData(dataFromBuffer)
+			err = proxy.writeToDestination(dst, dataFromBuffer)
+			if err != nil {
+				proxy.err(err)
+				return
 			}
+			continue
+		}
+
+		syncIdent := <-id
+		if syncIdent != -1 {
+			cacheData := &caching.CacheData{ID: syncIdent}
+			cacheData.SaveData(dataFromBuffer)
 		}
 		err = proxy.writeToDestination(dst, dataFromBuffer)
 		if err != nil {
