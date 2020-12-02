@@ -60,25 +60,6 @@ func ExtractData(data []byte, identifier int) (cacheData CacheData, err error) {
 	return
 }
 
-//ExtractDataFromRemote extracts data from recieved data.
-func ExtractDataFromRemote(data []byte, identifier int) (cacheData CacheData, err error) {
-	//This method first needs to check if there's the same URL based cache available in the Cache storage.
-	dataStrings := strings.Split(string(data), "\n")
-	baseInfo := strings.Split(dataStrings[0], " ")
-	crud := strings.TrimSpace(baseInfo[0])
-	//Cache only for GET method
-	if crud != "GET" {
-		err = errors.New("Caching only available for GET method")
-		return
-	}
-
-	cacheData.MethodIdentifier = crud
-	cacheData.URL = strings.TrimSpace(baseInfo[1])
-	cacheData.Protocol = strings.TrimSpace(baseInfo[2])
-	cacheData.ID = identifier
-	return
-}
-
 // DoesCacheDataExistNB Tries to find a specific cacheData in Cache
 func (cacheData *CacheData) DoesCacheDataExistNB() (idx int) {
 	idx = -1
@@ -115,12 +96,17 @@ func (cacheData *CacheData) DoesCacheDataExistNB() (idx int) {
 
 // SaveData Tries to find a specific cacheData in Cache
 func (cacheData *CacheData) SaveData(data []byte) {
-	sort.SliceStable(Cache, func(i, j int) bool { return Cache[i].ID < Cache[j].ID })
-	idx := sort.Search(len(Cache), func(i int) bool {
-		return Cache[i].ID >= cacheData.ID
-	})
+	idx := -1
+	if len(Cache) == 1 {
+		idx = 0
+	} else {
+		sort.SliceStable(Cache, func(i, j int) bool { return Cache[i].ID < Cache[j].ID })
+		idx = sort.Search(len(Cache), func(i int) bool {
+			return Cache[i].ID >= cacheData.ID
+		})
+	}
 	if idx >= 0 && len(Cache[idx].ResponseBody) == 0 {
-		log.Println("Caching response data from remote service.")
+		log.Println("Saving response data from remote service.")
 		Cache[idx].ResponseBody = data
 		Cache[idx].Expiration = time.Now()
 	}

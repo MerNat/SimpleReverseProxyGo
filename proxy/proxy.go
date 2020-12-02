@@ -61,7 +61,6 @@ func (proxy *Proxy) CopySrcDst(src, dst io.ReadWriteCloser, isFromLocalhost bool
 	for {
 		n, err := src.Read(buff)
 		if err != nil {
-			// Reading error.
 			proxy.err(err)
 			return
 		}
@@ -70,42 +69,53 @@ func (proxy *Proxy) CopySrcDst(src, dst io.ReadWriteCloser, isFromLocalhost bool
 
 		if isFromLocalhost {
 			identifier := len(caching.Cache)
+			saveData := true
 			cacheData, err := caching.ExtractData(dataFromBuffer, identifier)
-
-			checkOld, err := caching.GetCacheDataUsingURL(cacheData.URL)
 			if err != nil {
-				cacheData = checkOld
-			}
-			index := cacheData.DoesCacheDataExistNB()
-			if index >= 0 {
-				//If found; retrieve data from cache and send it back to client.
-				cData, err := caching.GetCacheData(index)
-				if err != nil {
-					log.Println(err.Error())
+				go func() {
+					id <- -1
+				}()
+			} else {
+				checkOld, err := caching.GetCacheDataUsingURL(cacheData.URL)
+				if err == nil {
+					cacheData = checkOld
+					saveData = false
+				}
+				index := cacheData.DoesCacheDataExistNB()
+				if index >= 0 {
+					//If found; retrieve data from cache and send it back to client.
+					cData, err := caching.GetCacheData(index)
+					if err != nil {
+						log.Println(err.Error())
+						continue
+					}
+					url := cData.URL
+					if url == "" {
+						url = "/"
+					}
+					log.Printf("Responding to [%s] query from caching.\n", url)
+					err = proxy.writeToDestination(src, cData.ResponseBody)
+					if err != nil {
+						proxy.err(err)
+						return
+					}
 					continue
 				}
-				url := cData.URL
-				if url == "" {
-					url = "/"
+				// Save data for a later use.
+				if saveData {
+					cacheData.AddCacheData()
 				}
-				log.Printf("Responding to [%s] query from caching.\n", url)
-				err = proxy.writeToDestination(src, cData.ResponseBody)
-				if err != nil {
-					proxy.err(err)
-					// return
-				}
-				continue
+				go func(ident int) {
+					id <- ident
+				}(identifier)
 			}
-			// Save data for a later use.
-			cacheData.AddCacheData()
-			go func(ident int) {
-				id <- ident
-			}(identifier)
 		} else {
-			cacheData := &caching.CacheData{ID: <-id}
-			cacheData.SaveData(dataFromBuffer)
+			syncIdent := <-id
+			if syncIdent != -1 {
+				cacheData := &caching.CacheData{ID: syncIdent}
+				cacheData.SaveData(dataFromBuffer)
+			}
 		}
-
 		err = proxy.writeToDestination(dst, dataFromBuffer)
 		if err != nil {
 			proxy.err(err)
