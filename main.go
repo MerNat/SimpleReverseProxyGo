@@ -47,6 +47,6 @@ func main() {
 		// Http is a stateless protocol thus a proxy needes to reinitiate the new next incoming call (conn)
 		// each time it finishes handling the previous one.
 		p = proxy.NewConnection(conn, listenerAddress, remoteAddress)
-		p.Start()
+		go p.Start()
 	}
 }
